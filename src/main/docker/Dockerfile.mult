@@ -1,0 +1,28 @@
+# Fase de build: utiliza uma imagem com JDK completo para compilar e empacotar o projeto
+FROM maven:3.9.4-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Copiar arquivos de configuração do Maven e instalar dependências
+COPY pom.xml ./
+RUN mvn dependency:go-offline -B
+
+# Copiar o código-fonte e realizar o build
+COPY src ./src
+RUN mvn package -DskipTests -B -Dquarkus.package.type=uber-jar
+
+# Fase de runtime: utiliza uma imagem mais enxuta para rodar o app
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# Configurar variáveis de ambiente
+ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
+
+# Copiar o JAR gerado na fase de build para a imagem de runtime
+COPY --from=build /app/target/*-runner.jar /app/app.jar
+
+# Expor a porta da aplicação
+EXPOSE 8080
+
+# Comando para iniciar a aplicação
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
