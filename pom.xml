@@ -128,4 +128,28 @@
       </properties>
     </profile>
   </profiles>
+
+
+
+
+  <repositories>
+    <repository>
+        <id>mymavenfeed</id>
+        <url>https://pkgs.dev.azure.com/lets2/AZURE/_packaging/mymavenfeed/maven/v1</url>
+        <releases>
+            <enabled>true</enabled>
+        </releases>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+  </repositories>
+
+  <distributionManagement>
+      <repository>
+          <id>mymavenfeed</id>
+          <url>https://pkgs.dev.azure.com/lets2/AZURE/_packaging/mymavenfeed/maven/v1</url>
+      </repository>
+  </distributionManagement>
+
 </project>

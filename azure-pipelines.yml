@@ -1,39 +1,59 @@
 trigger:
     - main
 
-# pool:
-#   vmImage: 'ubuntu-latest'
 pool:
-    name: "Default" # pool onde está o self-hosted agent
+    name: "Default" # pool do agente self-hosted
     demands:
         - agent.name -equals mylinuxagent
 
 steps:
-    # - task: Maven@4
-    #   inputs:
-    #       goals: "clean package"
+    - task: MavenAuthenticate@0
+      displayName: "Authenticate Maven feed"
+      inputs:
+          artifactsFeeds: "mymavenfeed"
+          mavenServiceConnections: "ServConnMavenFeed" #
 
     - task: Maven@4
+      displayName: "Build Maven Package"
       inputs:
           mavenPomFile: "pom.xml"
-          publishJUnitResults: true
-          testResultsFiles: "**/surefire-reports/TEST-*.xml"
+          goals: "clean package"
           javaHomeOption: "JDKVersion"
           mavenVersionOption: "Default"
-          mavenAuthenticateFeed: false
-          effectivePomSkip: false
-          sonarQubeRunAnalysis: false
+          mavenOptions: "-Xmx1024m"
+          mavenAuthenticateFeed: true # autenticação integrada
 
-    - task: Docker@2
-      displayName: "Build and Push Docker Image"
+    - script: cat $(Agent.TempDirectory)/settings.xml
+      displayName: "Debug settings.xml" # verificar se o settings.xml foi gerado corretamente
+
+    - task: Maven@4
+      displayName: "Publish to Maven Feed"
       inputs:
-          containerRegistry: "dockerhubconnection"
-          repository: "lets2/quarkus-maven-jvm"
-          command: "buildAndPush"
-          # Dockerfile: "src/main/docker/Dockerfile.mult"
-          Dockerfile: "**/Dockerfile.jvm"
-          buildContext: "$(System.DefaultWorkingDirectory)" # define o build context na raiz, mesmo o docker estando em outro lugar
-          tags: 'latest'
-          # tags: |
-          #   latest
-          #   $(Build.BuildId)
+          mavenPomFile: "pom.xml"
+          goals: "deploy"
+          options: "-DskipTests"
+          javaHomeOption: "JDKVersion"
+          mavenVersionOption: "Default"
+          mavenAuthenticateFeed: true # autenticação integrada
+
+
+    # - script: ls -l target/
+    #   displayName: "Check target directory contents"
+
+    # - task: Maven@4
+    #   displayName: "Deploy JAR manually"
+    #   condition: succeeded()
+    #   inputs:
+    #       mavenPomFile: "pom.xml"
+    #       goals: "deploy:deploy-file"
+    #       options: >
+    #           -DgroupId=org.gs
+    #           -DartifactId=quarkus-maven
+    #           -Dversion=1.0.0-SNAPSHOT
+    #           -Dpackaging=jar
+    #           -Dfile=target/quarkus-maven-1.0.0-SNAPSHOT.jar
+    #           -DrepositoryId=mymavenfeed
+    #           -Durl=https://pkgs.dev.azure.com/lets2/AZURE/_packaging/mymavenfeed/maven/v1
+    #       javaHomeOption: "JDKVersion"
+    #       mavenVersionOption: "Default"
+    #       mavenAuthenticateFeed: true
